@@ -3,19 +3,26 @@ unitscan:SetScript('OnUpdate', function() unitscan.UPDATE() end)
 unitscan:SetScript('OnEvent', function() unitscan.LOAD() end)
 unitscan:RegisterEvent'VARIABLES_LOADED'
 
+local IGNORE_TIME_SECONDS = 300
 local BROWN = {.7, .15, .05}
 local YELLOW = {1, 1, .15}
 local CHECK_INTERVAL = .1
+local BRIGHTYELLOW_FONT_COLOR_CODE = '|cFF66FF88'
 
 unitscan_targets = {}
+unitscan_unmute = true
+
+local unitscan_ignore = {}
 
 do
 	local last_played
 	
 	function unitscan.play_sound()
 		if not last_played or GetTime() - last_played > 10 then -- 8
-			SetCVar('MasterSoundEffects', 0)
-			SetCVar('MasterSoundEffects', 1)
+			if unitscan_unmute then 
+				SetCVar('MasterSoundEffects', 0)
+				SetCVar('MasterSoundEffects', 1)
+			end
 			PlaySoundFile[[Interface\AddOns\unitscan\Event_wardrum_ogre.ogg]]
 			PlaySoundFile[[Interface\AddOns\unitscan\scourge_horn.ogg]]
 			last_played = GetTime()
@@ -25,8 +32,8 @@ end
 
 function unitscan.check_for_targets()
 	for name, _ in unitscan_targets do
-		if unitscan.target(name) then
-			unitscan.toggle_target(name)
+		if (not unitscan_ignore[name] or GetTime() - unitscan_ignore[name] > IGNORE_TIME_SECONDS) and unitscan.target(name) then
+			unitscan_ignore[name] = GetTime()
 			unitscan.play_sound()
 			unitscan.flash.animation:Play()
 			unitscan.button:set_target()
@@ -316,26 +323,70 @@ function unitscan.sorted_targets()
 	return sorted_targets
 end
 
-function unitscan.toggle_target(name)
-	local key = strupper(name)
-	if unitscan_targets[key] then
-		unitscan_targets[key] = nil
-		unitscan.print('- ' .. key)
-	elseif key ~= '' then
-		unitscan_targets[key] = true
-		unitscan.print('+ ' .. key)
+function unitscan.toggle_target(name, add)
+	if not name or name == '' then
+		unitscan.print('Missing unit name.')
+		return		
 	end
+	local key = strupper(name)
+	if not add then
+		if unitscan_targets[key] then 
+			unitscan_targets[key] = nil
+			unitscan.print('- ' .. key)
+		else 
+			unitscan.print(key .. ' already not on the list.')
+		end
+	elseif key ~= '' and add then
+		if unitscan_targets[key] then
+			unitscan.print(key .. ' already on the list.')
+		else
+			unitscan_targets[key] = true
+			unitscan.print('+ ' .. key)
+		end
+	end
+end
+
+function unitscan.print_targets()
+	for _, key in ipairs(unitscan.sorted_targets()) do
+		unitscan.print(key)
+	end
+end
+
+function unitscan.print_help()
+	unitscan.print('When a unit is found, it will be ignored for ' .. IGNORE_TIME_SECONDS .. ' seconds. Use "/unitscan i" to reset ignore list.')
+	unitscan.print('Available commands:')
+	unitscan.print('   |r/unitscan '..BRIGHTYELLOW_FONT_COLOR_CODE..'a|rdd <name> - adds a unit to the list')
+	unitscan.print('   |r/unitscan '..BRIGHTYELLOW_FONT_COLOR_CODE..'r|remove <name> - removes a unit from the list')
+	unitscan.print('   |r/unitscan '..BRIGHTYELLOW_FONT_COLOR_CODE..'p|rrint - prints unit list')
+	unitscan.print('   |r/unitscan '..BRIGHTYELLOW_FONT_COLOR_CODE..'u|rnmute - enable sounds (if muted) when unit is found')
+	unitscan.print('   |r/unitscan '..BRIGHTYELLOW_FONT_COLOR_CODE..'i|rgnore - reset ignore list')
 end
 	
 SLASH_UNITSCAN1 = '/unitscan'
 function SlashCmdList.UNITSCAN(parameter)
-	local _, _, name = strfind(parameter, '^%s*(.-)%s*$')
-	
-	if name == '' then
-		for _, key in ipairs(unitscan.sorted_targets()) do
-			unitscan.print(key)
+	local _, _, cmd, arg1 = string.find(string.upper(parameter), "([%w]+)%s*(.*)$");
+	if cmd and cmd ~= '' then
+		cmd = strupper(cmd)
+	end 
+
+	if not cmd or cmd == '' or cmd == 'H' or cmd == 'HELP' then
+		unitscan.print_help()
+	elseif cmd == 'A' or cmd == 'ADD' then
+		unitscan.toggle_target(arg1, true)
+	elseif cmd == 'R' or cmd == 'REMOVE' then
+		unitscan.toggle_target(arg1, false)
+	elseif cmd == 'P' or cmd == 'PRINT' then
+		unitscan.print_targets()
+	elseif cmd == 'I' or cmd == 'IGNORE' then
+		unitscan_ignore = {}
+	elseif cmd == 'U' or cmd == 'UNMUTE' then
+		unitscan_unmute = not unitscan_unmute
+		local status = 'OFF'
+		if unitscan_unmute then
+			status = 'ON'
 		end
+		unitscan.print('Unmute sounds turned ' .. status)
 	else
-		unitscan.toggle_target(name)
+		unitscan.print_help()
 	end
 end

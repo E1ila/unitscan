@@ -2,5 +2,5 @@
 ## Author: shirsig
 ## Title: unitscan
 ## Notes: Unit scanner with flashy alert
-## SavedVariables: unitscan_targets
+## SavedVariables: unitscan_targets, unitscan_unmute
 unitscan.lua
