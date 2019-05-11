@@ -37,6 +37,7 @@ function unitscan.check_for_targets()
 			unitscan.play_sound()
 			unitscan.flash.animation:Play()
 			unitscan.button:set_target()
+			unitscan.print('FOUND ' .. key)
 		end
 	end
 end
@@ -379,6 +380,7 @@ function SlashCmdList.UNITSCAN(parameter)
 		unitscan.print_targets()
 	elseif cmd == 'I' or cmd == 'IGNORE' then
 		unitscan_ignore = {}
+		unitscan.print('Ignore list cleared.')
 	elseif cmd == 'U' or cmd == 'UNMUTE' then
 		unitscan_unmute = not unitscan_unmute
 		local status = 'OFF'
