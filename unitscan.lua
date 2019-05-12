@@ -37,7 +37,7 @@ function unitscan.check_for_targets()
 			unitscan.play_sound()
 			unitscan.flash.animation:Play()
 			unitscan.button:set_target()
-			unitscan.print('FOUND ' .. key)
+			unitscan.print('FOUND ' .. name)
 		end
 	end
 end
